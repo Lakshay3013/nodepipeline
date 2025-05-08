@@ -1,0 +1,44 @@
+name: CI/CD Pipeline Node.js
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install backend dependencies
+      run: npm install
+
+    - name: Build frontend
+      run: |
+        cd client
+        npm install
+        npm run build
+        cd ..
+
+    - name: Deploy to Server via SSH and PM2
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        ssh -i key.pem -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd /var/www/html/mern-marketplace
+          git pull origin main
+          npm install
+          cd client
+          npm install
+          npm run build
+          cd ..
+          pm2 restart mern-marketplace || pm2 start server/server.js --name mern-marketplace
+        EOF
