@@ -19,11 +19,18 @@ jobs:
         node-version: '13'
 
     - name: Install backend dependencies
-      run: npm install
+      run: |
+        curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
+        source ~/.bashrc
+        nvm install 13.12.0  # Install node 13.12.0 to match package engine version
+        nvm use 13.12.0
+        npm install
 
     - name: Build frontend
       working-directory: ./client
       run: |
+        # Set environment variable to use OpenSSL legacy support
+        export NODE_OPTIONS=--openssl-legacy-provider
         npm install
         npm run build
 
