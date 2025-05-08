@@ -37,14 +37,26 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
         chmod 600 key.pem
         ssh -i key.pem -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd /var/www/html/mern-marketplace
+          # Check if node and npm are installed, if not install them
+          if ! command -v node &> /dev/null
+          then
+            echo "Node.js not found. Installing Node.js..."
+            curl -fsSL https://deb.nodesource.com/setup_13.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+          fi
 
-          # Reset working directory and pull latest code
+          # Check if npm is installed, if not install it
+          if ! command -v npm &> /dev/null
+          then
+            echo "npm not found. Installing npm..."
+            sudo apt-get install -y npm
+          fi
+
+          # Install backend dependencies
+          cd /var/www/html/mern-marketplace
           git fetch origin
           git reset --hard origin/main
           git clean -fd
-
-          # Install backend dependencies
           npm install
 
           # Install frontend dependencies
