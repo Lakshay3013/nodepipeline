@@ -16,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '13'
+        node-version: '18'
 
     - name: Install backend dependencies
       run: npm install
@@ -32,26 +32,30 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
         chmod 600 key.pem
         ssh -i key.pem -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          export NVM_DIR="$HOME/.nvm"
-          source "$NVM_DIR/nvm.sh"
-          source "$NVM_DIR/bash_completion"
-          nvm use 18 || nvm install 18
-
           cd /var/www/html/mern-marketplace
 
-          # Reset local changes before pulling
+          # Reset working directory and pull latest code
           git fetch origin
           git reset --hard origin/main
           git clean -fd
 
+          # Install backend dependencies
           npm install
+
+          # Install frontend dependencies
           cd client
           npm install
           npm run build
           cd ..
 
-          # Ensure PM2 is in path
-          export PATH="$HOME/.npm-global/bin:$PATH"
+          # Install PM2 if not already installed
+          if ! command -v pm2 &> /dev/null
+          then
+            echo "PM2 not found. Installing PM2..."
+            sudo npm install -g pm2
+          fi
+
+          # Restart or start PM2 process
           pm2 restart mern-marketplace || pm2 start server/server.js --name mern-marketplace
         EOF
         rm -f key.pem
